@@ -16,6 +16,15 @@ export const projectsData = [
         code: '',
         demo: '',
         role: 'Full Stack Developer',
+    },
+    {
+        id: 3,
+        name: 'Financial Wellbeing Copilot',
+        description: "Built a multi-agent banking assistant that helps customers manage their finances and card controls. Features card-based authentication with a demo OTP flow, new-card registration, a personalized 30-day financial wellbeing summary, and tailored control/limit recommendations driven by recent financial signals and saved preferences. Designed with an orchestrator (bank_agent) that delegates to specialist agents for profiles, insights, controls, and preferences, with graceful fallback to bundled local data when BigQuery is not configured.",
+        tools: ['Python', 'Google BigQuery', 'Vertex AI', 'Docker', 'Multi-Agent (ADK)'],
+        code: '',
+        demo: '',
+        role: 'AI/Backend Developer',
     }
 ];
 
