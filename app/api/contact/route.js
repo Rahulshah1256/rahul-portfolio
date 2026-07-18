@@ -2,16 +2,21 @@ import axios from 'axios';
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
+// Nodemailer needs the Node.js runtime (it won't run on the Edge runtime).
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // The inbox that should receive contact form submissions.
 // Falls back to a hard-coded address if the env var is not set.
 const RECIPIENT_EMAIL = process.env.CONTACT_RECIPIENT_EMAIL || 'pelmi544@gmail.com';
 
-// Create and configure Nodemailer transporter
+// Create and configure Nodemailer transporter.
+// Port 465 (implicit SSL) tends to be more reliable on serverless hosts
+// (e.g. Vercel) than STARTTLS on 587.
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
   host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_ADDRESS,
     pass: process.env.GMAIL_PASSKEY,
