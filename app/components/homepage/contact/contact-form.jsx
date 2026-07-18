@@ -31,14 +31,14 @@ function ContactForm() {
       return;
     } else {
       setError({ ...error, required: false });
-    };
+    }
 
     try {
       setIsLoading(true);
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/contact`,
-        userInput
-      );
+      // Use the configured base URL when available, otherwise fall back to a
+      // relative path so the request always hits the app's own API route.
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+      await axios.post(`${baseUrl}/api/contact`, userInput);
 
       toast.success("Message sent successfully!");
       setUserInput({
@@ -47,10 +47,12 @@ function ContactForm() {
         message: "",
       });
     } catch (error) {
-      toast.error(error?.response?.data?.message);
+      toast.error(
+        error?.response?.data?.message || "Something went wrong. Please try again."
+      );
     } finally {
       setIsLoading(false);
-    };
+    }
   };
 
   return (
@@ -126,6 +128,6 @@ function ContactForm() {
       </div>
     </div>
   );
-};
+}
 
 export default ContactForm;

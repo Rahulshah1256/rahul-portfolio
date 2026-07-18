@@ -2,15 +2,19 @@ import axios from 'axios';
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
+// The inbox that should receive contact form submissions.
+// Falls back to a hard-coded address if the env var is not set.
+const RECIPIENT_EMAIL = process.env.CONTACT_RECIPIENT_EMAIL || 'pelmi544@gmail.com';
+
 // Create and configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   host: 'smtp.gmail.com',
   port: 587,
-  secure: false, 
+  secure: false,
   auth: {
     user: process.env.EMAIL_ADDRESS,
-    pass: process.env.GMAIL_PASSKEY, 
+    pass: process.env.GMAIL_PASSKEY,
   },
 });
 
@@ -27,7 +31,7 @@ async function sendTelegramMessage(token, chat_id, message) {
     console.error('Error sending Telegram message:', error.response?.data || error.message);
     return false;
   }
-};
+}
 
 // HTML email template
 const generateEmailTemplate = (name, email, userMessage) => `
@@ -48,16 +52,16 @@ const generateEmailTemplate = (name, email, userMessage) => `
 // Helper function to send an email via Nodemailer
 async function sendEmail(payload, message) {
   const { name, email, message: userMessage } = payload;
-  
+
   const mailOptions = {
-    from: "Portfolio", 
-    to: process.env.EMAIL_ADDRESS, 
-    subject: `New Message From ${name}`, 
-    text: message, 
-    html: generateEmailTemplate(name, email, userMessage), 
-    replyTo: email, 
+    from: `"Portfolio Contact" <${process.env.EMAIL_ADDRESS}>`,
+    to: RECIPIENT_EMAIL,
+    subject: `New Message From ${name}`,
+    text: message,
+    html: generateEmailTemplate(name, email, userMessage),
+    replyTo: email,
   };
-  
+
   try {
     await transporter.sendMail(mailOptions);
     return true;
@@ -65,41 +69,51 @@ async function sendEmail(payload, message) {
     console.error('Error while sending email:', error.message);
     return false;
   }
-};
+}
 
 export async function POST(request) {
   try {
     const payload = await request.json();
     const { name, email, message: userMessage } = payload;
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chat_id = process.env.TELEGRAM_CHAT_ID;
 
-    // Validate environment variables
-    if (!token || !chat_id) {
+    // Validate the incoming submission
+    if (!name || !email || !userMessage) {
       return NextResponse.json({
         success: false,
-        message: 'Telegram token or chat ID is missing.',
+        message: 'Name, email and message are all required.',
       }, { status: 400 });
+    }
+
+    // Ensure email credentials are configured
+    if (!process.env.EMAIL_ADDRESS || !process.env.GMAIL_PASSKEY) {
+      return NextResponse.json({
+        success: false,
+        message: 'Email service is not configured on the server.',
+      }, { status: 500 });
     }
 
     const message = `New message from ${name}\n\nEmail: ${email}\n\nMessage:\n\n${userMessage}\n\n`;
 
-    // Send Telegram message
-    const telegramSuccess = await sendTelegramMessage(token, chat_id, message);
-
-    // Send email
+    // Send email to the portfolio owner's inbox (primary channel)
     const emailSuccess = await sendEmail(payload, message);
 
-    if (telegramSuccess && emailSuccess) {
+    // Optionally forward to Telegram if it is configured (non-blocking)
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chat_id = process.env.TELEGRAM_CHAT_ID;
+    if (token && chat_id) {
+      await sendTelegramMessage(token, chat_id, message);
+    }
+
+    if (emailSuccess) {
       return NextResponse.json({
         success: true,
-        message: 'Message and email sent successfully!',
+        message: 'Your message has been sent successfully!',
       }, { status: 200 });
     }
 
     return NextResponse.json({
       success: false,
-      message: 'Failed to send message or email.',
+      message: 'Failed to send your message. Please try again later.',
     }, { status: 500 });
   } catch (error) {
     console.error('API Error:', error.message);
@@ -108,4 +122,4 @@ export async function POST(request) {
       message: 'Server error occurred.',
     }, { status: 500 });
   }
-};
+}
